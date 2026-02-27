@@ -4,6 +4,8 @@
 
 Built for prompt engineers and product teams who want to make evidence-based decisions when tuning LLM prompts. Paste two prompt variants, define test cases, run them against Claude, and see scored results side-by-side.
 
+![Prompt Evaluator](public/screenshot.png)
+
 ---
 
 ## Features
