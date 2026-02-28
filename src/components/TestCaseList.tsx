@@ -30,9 +30,12 @@ export function TestCaseList({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">Test Cases</h2>
-          <Badge variant="secondary">{testCases.length} / 10</Badge>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Test Cases</h2>
+            <Badge variant="secondary">{testCases.length} / 10</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">Each test case is a user message that both prompts will be evaluated against</p>
         </div>
         <Button
           onClick={onAdd}

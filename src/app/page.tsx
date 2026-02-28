@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Play, Square, AlertCircle, FlaskConical, History } from 'lucide-react'
+import { Play, Square, AlertCircle, FlaskConical, History, ArrowRight } from 'lucide-react'
 import { TestCase, EvalRun } from '@/lib/types'
 import { PromptEditor } from '@/components/PromptEditor'
 import { TestCaseList } from '@/components/TestCaseList'
@@ -182,6 +182,33 @@ export default function HomePage() {
           </TabsList>
 
           <TabsContent value="evaluate" className="space-y-6 mt-0">
+            {/* How it works — shown when prompts are empty */}
+            {!promptA && !promptB && !hasResults && (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-3">How it works</h2>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shrink-0">1</span>
+                    <span>Write two prompt variants</span>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 hidden sm:block shrink-0 text-muted-foreground/50" />
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shrink-0">2</span>
+                    <span>Add test cases to evaluate against</span>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 hidden sm:block shrink-0 text-muted-foreground/50" />
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shrink-0">3</span>
+                    <span>Run and compare — auto-scored by AI</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground/70 mt-3">
+                  Both prompts are sent to Claude for each test case. A judge model scores outputs on relevance, conciseness, and accuracy.
+                  {' '}<button onClick={handleLoadExample} className="text-blue-500 hover:underline">Try the example</button> to see it in action.
+                </p>
+              </div>
+            )}
+
             {/* Error banner */}
             {evaluation.error && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
