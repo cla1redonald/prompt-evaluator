@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { isEvaluateRequest } from '@/lib/types'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
@@ -8,6 +9,15 @@ export const maxDuration = 120
 const MODEL = 'claude-sonnet-4-5-20250929'
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const { allowed, retryAfterSeconds } = checkRateLimit(ip)
+  if (!allowed) {
+    return new Response(
+      JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+      { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(retryAfterSeconds) } }
+    )
+  }
+
   let body: unknown
   try {
     body = await request.json()

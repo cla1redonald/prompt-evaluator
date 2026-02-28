@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { isEvaluateModelsRequest, ModelId, SUPPORTED_MODELS } from '@/lib/types'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
@@ -120,6 +121,15 @@ async function callModel(
 }
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const { allowed, retryAfterSeconds } = checkRateLimit(ip)
+  if (!allowed) {
+    return new Response(
+      JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+      { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(retryAfterSeconds) } }
+    )
+  }
+
   let body: unknown
   try {
     body = await request.json()

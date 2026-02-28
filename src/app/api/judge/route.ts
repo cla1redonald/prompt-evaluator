@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { isJudgeRequest, JudgeResponse } from '@/lib/types'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -26,6 +27,15 @@ Return ONLY valid JSON in exactly this format:
 }`
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const { allowed, retryAfterSeconds } = checkRateLimit(ip)
+  if (!allowed) {
+    return Response.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
+    )
+  }
+
   let body: unknown
   try {
     body = await request.json()

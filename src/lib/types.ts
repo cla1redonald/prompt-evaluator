@@ -138,6 +138,11 @@ export interface JudgeResponse {
   reasoning: string
 }
 
+// Input length limits (server-side validation)
+export const MAX_PROMPT_LENGTH = 10000
+export const MAX_TEST_CASE_INPUT_LENGTH = 5000
+export const MAX_SYSTEM_CONTEXT_LENGTH = 5000
+
 // Type guards
 export function isTestCase(obj: unknown): obj is TestCase {
   return (
@@ -167,8 +172,11 @@ export function isEvaluateRequest(obj: unknown): obj is EvaluateRequest {
   const req = obj as EvaluateRequest
   if (typeof req.promptA !== 'string' || req.promptA.trim() === '') return false
   if (typeof req.promptB !== 'string' || req.promptB.trim() === '') return false
+  if (req.promptA.length > MAX_PROMPT_LENGTH || req.promptB.length > MAX_PROMPT_LENGTH) return false
+  if (req.systemContext && typeof req.systemContext === 'string' && req.systemContext.length > MAX_SYSTEM_CONTEXT_LENGTH) return false
   if (!Array.isArray(req.testCases) || req.testCases.length === 0) return false
   if (req.testCases.length > 10) return false
+  if (req.testCases.some((tc: { input?: string }) => typeof tc.input === 'string' && tc.input.length > MAX_TEST_CASE_INPUT_LENGTH)) return false
   return req.testCases.every(isTestCase)
 }
 
@@ -222,11 +230,14 @@ export function isEvaluateModelsRequest(obj: unknown): obj is EvaluateModelsRequ
   if (typeof obj !== 'object' || obj === null) return false
   const req = obj as EvaluateModelsRequest
   if (typeof req.prompt !== 'string' || req.prompt.trim() === '') return false
+  if (req.prompt.length > MAX_PROMPT_LENGTH) return false
+  if (req.systemContext && typeof req.systemContext === 'string' && req.systemContext.length > MAX_SYSTEM_CONTEXT_LENGTH) return false
   if (!Array.isArray(req.models)) return false
   if (req.models.length < 2 || req.models.length > 3) return false
   if (!req.models.every(isModelId)) return false
   if (!Array.isArray(req.testCases) || req.testCases.length === 0) return false
   if (req.testCases.length > 10) return false
+  if (req.testCases.some((tc: { input?: string }) => typeof tc.input === 'string' && tc.input.length > MAX_TEST_CASE_INPUT_LENGTH)) return false
   return req.testCases.every(isTestCase)
 }
 
