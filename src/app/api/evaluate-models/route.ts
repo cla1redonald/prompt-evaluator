@@ -16,11 +16,12 @@ interface ModelResult {
 }
 
 async function callAnthropic(
+  modelId: ModelId,
   apiModel: string,
   system: string,
   input: string,
   apiKey: string
-): Promise<ModelResult & { modelId: ModelId }> {
+): Promise<ModelResult> {
   const client = new Anthropic({ apiKey })
   const start = Date.now()
   const response = await client.messages.create({
@@ -36,7 +37,7 @@ async function callAnthropic(
       .map((b) => b.text)
       .join('') || ''
   return {
-    modelId: 'claude-sonnet-4-5',
+    modelId,
     output,
     tokens: { input: response.usage.input_tokens, output: response.usage.output_tokens },
     latencyMs,
@@ -44,11 +45,12 @@ async function callAnthropic(
 }
 
 async function callOpenAI(
+  modelId: ModelId,
   apiModel: string,
   system: string,
   input: string,
   apiKey: string
-): Promise<ModelResult & { modelId: ModelId }> {
+): Promise<ModelResult> {
   const openai = new OpenAI({ apiKey })
   const start = Date.now()
   const response = await openai.chat.completions.create({
@@ -62,7 +64,7 @@ async function callOpenAI(
   const latencyMs = Date.now() - start
   const output = response.choices[0]?.message?.content || ''
   return {
-    modelId: 'gpt-4o',
+    modelId,
     output,
     tokens: {
       input: response.usage?.prompt_tokens ?? 0,
@@ -73,11 +75,12 @@ async function callOpenAI(
 }
 
 async function callGemini(
+  modelId: ModelId,
   apiModel: string,
   system: string,
   input: string,
   apiKey: string
-): Promise<ModelResult & { modelId: ModelId }> {
+): Promise<ModelResult> {
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({ model: apiModel, systemInstruction: system })
   const start = Date.now()
@@ -86,7 +89,7 @@ async function callGemini(
   const output = result.response.text() || ''
   const usage = result.response.usageMetadata
   return {
-    modelId: 'gemini-1-5-pro',
+    modelId,
     output,
     tokens: {
       input: usage?.promptTokenCount ?? 0,
@@ -107,12 +110,12 @@ async function callModel(
   const modelInfo = SUPPORTED_MODELS.find((m) => m.id === modelId)
   if (!modelInfo) throw new Error(`Unknown model: ${modelId}`)
 
-  if (modelId === 'claude-sonnet-4-5') {
-    return callAnthropic(modelInfo.apiModel, system, input, anthropicKey)
-  } else if (modelId === 'gpt-4o') {
-    return callOpenAI(modelInfo.apiModel, system, input, openaiKey)
+  if (modelInfo.provider === 'Anthropic') {
+    return callAnthropic(modelId, modelInfo.apiModel, system, input, anthropicKey)
+  } else if (modelInfo.provider === 'OpenAI') {
+    return callOpenAI(modelId, modelInfo.apiModel, system, input, openaiKey)
   } else {
-    return callGemini(modelInfo.apiModel, system, input, googleKey)
+    return callGemini(modelId, modelInfo.apiModel, system, input, googleKey)
   }
 }
 
@@ -149,6 +152,21 @@ export async function POST(request: NextRequest) {
 
   const openaiKey = process.env.OPENAI_API_KEY ?? ''
   const googleKey = process.env.GOOGLE_AI_API_KEY ?? ''
+
+  // Validate API keys for selected models
+  const missingKeys: string[] = []
+  for (const modelId of models) {
+    const modelInfo = SUPPORTED_MODELS.find((m) => m.id === modelId)
+    if (!modelInfo) continue
+    if (modelInfo.provider === 'OpenAI' && !openaiKey) missingKeys.push('OPENAI_API_KEY')
+    if (modelInfo.provider === 'Google' && !googleKey) missingKeys.push('GOOGLE_AI_API_KEY')
+  }
+  if (missingKeys.length > 0) {
+    return new Response(
+      JSON.stringify({ error: `Missing API keys: ${[...new Set(missingKeys)].join(', ')}` }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
