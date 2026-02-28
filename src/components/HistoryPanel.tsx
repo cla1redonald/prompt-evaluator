@@ -5,13 +5,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Trash2, Clock, Eye, AlertTriangle } from 'lucide-react'
-import { EvalRun } from '@/lib/types'
+import { Trash2, Clock, Eye, AlertTriangle, GitCompare, Cpu } from 'lucide-react'
+import { AnyEvalRun, EvalRun, ModelEvalRun, isModelEvalRun, SUPPORTED_MODELS } from '@/lib/types'
 import { ResultsGrid } from './ResultsGrid'
+import { ModelResultsGrid } from './ModelResultsGrid'
 import { ExportButton } from './ExportButton'
 
 interface HistoryPanelProps {
-  runs: EvalRun[]
+  runs: AnyEvalRun[]
   onDelete: (id: string) => void
   onClearAll: () => void
 }
@@ -37,7 +38,7 @@ function truncate(text: string, maxLen: number): string {
 }
 
 export function HistoryPanel({ runs, onDelete, onClearAll }: HistoryPanelProps) {
-  const [viewingRun, setViewingRun] = useState<EvalRun | null>(null)
+  const [viewingRun, setViewingRun] = useState<AnyEvalRun | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
 
   if (runs.length === 0) {
@@ -71,66 +72,108 @@ export function HistoryPanel({ runs, onDelete, onClearAll }: HistoryPanelProps) 
           </Button>
         </div>
 
-        {runs.map((run) => (
-          <Card key={run.id} className="group">
-            <CardContent className="pt-3 pb-3">
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" className="text-xs font-mono">
-                      {run.testCases.length} test{run.testCases.length !== 1 ? 's' : ''}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatTimestamp(run.timestamp)}
-                    </span>
+        {runs.map((run) => {
+          const isModel = isModelEvalRun(run)
+          const evalRun = run as EvalRun
+          const modelRun = run as ModelEvalRun
+          return (
+            <Card key={run.id} className="group">
+              <CardContent className="pt-3 pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-xs gap-1">
+                        {isModel ? (
+                          <Cpu className="h-3 w-3" />
+                        ) : (
+                          <GitCompare className="h-3 w-3" />
+                        )}
+                        {isModel ? 'Compare Models' : 'Compare Prompts'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {run.testCases.length} test{run.testCases.length !== 1 ? 's' : ''}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatTimestamp(run.timestamp)}
+                      </span>
+                    </div>
+
+                    {isModel ? (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Prompt</p>
+                        <p className="text-xs text-muted-foreground font-mono line-clamp-2">
+                          {truncate(modelRun.prompt, 120)}
+                        </p>
+                        <div className="flex gap-1 flex-wrap mt-1">
+                          {modelRun.models.map((modelId) => {
+                            const info = SUPPORTED_MODELS.find((m) => m.id === modelId)
+                            return (
+                              <span
+                                key={modelId}
+                                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border"
+                                style={{ borderColor: info?.color + '60', color: info?.color }}
+                              >
+                                <span
+                                  className="h-1.5 w-1.5 rounded-full"
+                                  style={{ backgroundColor: info?.color }}
+                                />
+                                {info?.label ?? modelId}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium flex items-center gap-1">
+                            <span className="inline-block w-3 h-3 rounded bg-blue-600 text-white text-center text-[9px] leading-3">A</span>
+                            Prompt A
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono line-clamp-2">
+                            {truncate(evalRun.promptA, 80)}
+                          </p>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium flex items-center gap-1">
+                            <span className="inline-block w-3 h-3 rounded bg-purple-600 text-white text-center text-[9px] leading-3">B</span>
+                            Prompt B
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono line-clamp-2">
+                            {truncate(evalRun.promptB, 80)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-medium flex items-center gap-1">
-                        <span className="inline-block w-3 h-3 rounded bg-blue-600 text-white text-center text-[9px] leading-3">A</span>
-                        Prompt A
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono line-clamp-2">
-                        {truncate(run.promptA, 80)}
-                      </p>
-                    </div>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-medium flex items-center gap-1">
-                        <span className="inline-block w-3 h-3 rounded bg-purple-600 text-white text-center text-[9px] leading-3">B</span>
-                        Prompt B
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono line-clamp-2">
-                        {truncate(run.promptB, 80)}
-                      </p>
-                    </div>
+
+                  <div className="flex gap-1 shrink-0">
+                    <ExportButton run={run} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setViewingRun(run)}
+                      title="View results"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive"
+                      onClick={() => onDelete(run.id)}
+                      title="Delete run"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <ExportButton run={run} />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => setViewingRun(run)}
-                    title="View results"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive"
-                    onClick={() => onDelete(run.id)}
-                    title="Delete run"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* View run dialog */}
@@ -141,17 +184,28 @@ export function HistoryPanel({ runs, onDelete, onClearAll }: HistoryPanelProps) 
               {viewingRun && `Run from ${formatTimestamp(viewingRun.timestamp)}`}
             </DialogTitle>
           </DialogHeader>
-          {viewingRun && (
-            <ResultsGrid
+          {viewingRun && isModelEvalRun(viewingRun) ? (
+            <ModelResultsGrid
               testCases={viewingRun.testCases}
               results={viewingRun.results}
               status="done"
               progress={{ completed: 0, total: 0 }}
+              selectedModels={viewingRun.models}
               onUpdateRating={() => {}}
               onReset={() => setViewingRun(null)}
               currentRun={viewingRun}
             />
-          )}
+          ) : viewingRun ? (
+            <ResultsGrid
+              testCases={viewingRun.testCases}
+              results={(viewingRun as EvalRun).results}
+              status="done"
+              progress={{ completed: 0, total: 0 }}
+              onUpdateRating={() => {}}
+              onReset={() => setViewingRun(null)}
+              currentRun={viewingRun as EvalRun}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 

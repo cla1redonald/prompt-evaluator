@@ -15,6 +15,8 @@ interface ResultCellProps {
   rating?: 'up' | 'down' | null
   onRate?: (rating: 'up' | 'down' | null) => void
   isLoading?: boolean
+  /** Optional accent color overriding the variant-derived color (e.g. for model comparison) */
+  accentColor?: string
 }
 
 function ScoreBadge({ label, value }: { label: string; value: number }) {
@@ -40,10 +42,11 @@ export function ResultCell({
   rating,
   onRate,
   isLoading = false,
+  accentColor,
 }: ResultCellProps) {
   const [expanded, setExpanded] = useState(false)
 
-  const variantColor = variant === 'A' ? 'text-blue-400' : 'text-purple-400'
+  const variantColor = accentColor ? '' : variant === 'A' ? 'text-blue-400' : 'text-purple-400'
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { saveRun, loadRuns, deleteRun, clearAllRuns, getRunById } from '../src/lib/storage'
-import { EvalRun } from '../src/lib/types'
+import { EvalRun, ModelEvalRun } from '../src/lib/types'
 
 function makeRun(id: string, overrides: Partial<EvalRun> = {}): EvalRun {
   return {
@@ -136,5 +136,51 @@ describe('getRunById', () => {
 
   it('returns null when not found', () => {
     expect(getRunById('does-not-exist')).toBeNull()
+  })
+})
+
+describe('mixed history (EvalRun + ModelEvalRun)', () => {
+  function makeModelRun(id: string): ModelEvalRun {
+    return {
+      id,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      runType: 'compare-models',
+      prompt: 'Test prompt ' + id,
+      models: ['claude-sonnet-4-5', 'gpt-4o'],
+      testCases: [{ id: 'tc-1', name: 'Test', input: 'Hello' }],
+      results: [],
+    }
+  }
+
+  it('saves and loads both EvalRun and ModelEvalRun', () => {
+    const evalRun = makeRun('r1')
+    const modelRun = makeModelRun('r2')
+    saveRun(evalRun)
+    saveRun(modelRun)
+    const loaded = loadRuns()
+    expect(loaded).toHaveLength(2)
+    const ids = loaded.map((r) => r.id)
+    expect(ids).toContain('r1')
+    expect(ids).toContain('r2')
+  })
+
+  it('preserves runType on ModelEvalRun', () => {
+    const modelRun = makeModelRun('r1')
+    saveRun(modelRun)
+    const loaded = loadRuns()
+    const found = loaded.find((r) => r.id === 'r1') as ModelEvalRun
+    expect(found?.runType).toBe('compare-models')
+    expect(found?.prompt).toBe('Test prompt r1')
+  })
+
+  it('filters out invalid runs in mixed storage', () => {
+    const evalRun = makeRun('r1')
+    const modelRun = makeModelRun('r2')
+    localStorage.setItem(
+      'prompt-evaluator-history',
+      JSON.stringify([evalRun, modelRun, { invalid: true }, null])
+    )
+    const loaded = loadRuns()
+    expect(loaded).toHaveLength(2)
   })
 })

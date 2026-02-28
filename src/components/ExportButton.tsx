@@ -10,15 +10,34 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Download, FileJson, FileText } from 'lucide-react'
-import { EvalRun } from '@/lib/types'
-import { downloadCSV, downloadJSON } from '@/lib/export'
+import { AnyEvalRun, isModelEvalRun } from '@/lib/types'
+import { downloadCSV, downloadJSON, downloadModelRunCSV, downloadModelRunJSON } from '@/lib/export'
 
 interface ExportButtonProps {
-  run: EvalRun
+  run: AnyEvalRun
 }
 
 export function ExportButton({ run }: ExportButtonProps) {
   const [open, setOpen] = useState(false)
+  const isModelRun = isModelEvalRun(run)
+
+  const handleDownloadJSON = () => {
+    if (isModelRun) {
+      downloadModelRunJSON(run)
+    } else {
+      downloadJSON(run)
+    }
+    setOpen(false)
+  }
+
+  const handleDownloadCSV = () => {
+    if (isModelRun) {
+      downloadModelRunCSV(run)
+    } else {
+      downloadCSV(run)
+    }
+    setOpen(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -36,10 +55,7 @@ export function ExportButton({ run }: ExportButtonProps) {
           <Button
             variant="outline"
             className="flex flex-col h-20 gap-2"
-            onClick={() => {
-              downloadJSON(run)
-              setOpen(false)
-            }}
+            onClick={handleDownloadJSON}
           >
             <FileJson className="h-5 w-5 text-blue-500" />
             <span className="text-sm">JSON</span>
@@ -48,10 +64,7 @@ export function ExportButton({ run }: ExportButtonProps) {
           <Button
             variant="outline"
             className="flex flex-col h-20 gap-2"
-            onClick={() => {
-              downloadCSV(run)
-              setOpen(false)
-            }}
+            onClick={handleDownloadCSV}
           >
             <FileText className="h-5 w-5 text-green-500" />
             <span className="text-sm">CSV</span>

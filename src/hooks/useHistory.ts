@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { EvalRun } from '@/lib/types'
+import { AnyEvalRun } from '@/lib/types'
 import { loadRuns, saveRun, deleteRun, clearAllRuns } from '@/lib/storage'
 
 export function useHistory() {
-  const [runs, setRuns] = useState<EvalRun[]>([])
+  const [runs, setRuns] = useState<AnyEvalRun[]>([])
 
   useEffect(() => {
     setRuns(loadRuns())
   }, [])
 
-  const addRun = useCallback((run: EvalRun) => {
+  const addRun = useCallback((run: AnyEvalRun) => {
     saveRun(run)
     setRuns(loadRuns())
   }, [])
